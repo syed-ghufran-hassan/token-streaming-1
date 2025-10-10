@@ -14,20 +14,7 @@ This protocol enables continuous payment streams where a sender can establish a 
 - **Refund Excess**: Senders can reclaim unused tokens after stream completion
 - **Update Stream Details**: Both parties can consent to update payment terms via cryptographic signatures
 
-## Development Journey (10 Commits)
 
-This project was built progressively in 10 meaningful commits:
-
-1. **Initialize project** - Set up basic error codes and data variables
-2. **Add streams map** - Created storage structure for payment streams
-3. **Implement stream-to** - Core function to create new streams
-4. **Implement refuel** - Allow senders to add tokens to streams
-5. **Add calculate-block-delta** - Helper to calculate elapsed blocks
-6. **Add balance-of** - Helper to calculate withdrawable amounts
-7. **Implement withdraw** - Enable recipients to claim tokens
-8. **Implement refund** - Enable senders to reclaim excess tokens
-9. **Add signature verification** - Helpers for secure updates
-10. **Implement update-details** - Complete test suite and update functionality
 
 ## Project Structure
 
