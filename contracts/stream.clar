@@ -82,3 +82,31 @@
     (ok amount)
   )
 )
+
+;; Calculate the number of blocks a stream has been active
+;; @param timeframe: The start and stop block of the stream
+;; @returns: Number of blocks that have passed
+(define-read-only (calculate-block-delta
+    (timeframe (tuple (start-block uint) (stop-block uint)))
+  )
+  (let (
+    (start-block (get start-block timeframe))
+    (stop-block (get stop-block timeframe))
+
+    (delta 
+      (if (<= block-height start-block)
+        ;; Stream hasn't started yet
+        u0
+        ;; else
+        (if (< block-height stop-block)
+          ;; Stream is active
+          (- block-height start-block)
+          ;; else - Stream is over
+          (- stop-block start-block)
+        ) 
+      )
+    )
+  )
+    delta
+  )
+)
