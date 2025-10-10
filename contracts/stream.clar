@@ -57,3 +57,28 @@
     (ok current-stream-id)
   )
 )
+
+;; Refuel a stream with additional STX tokens
+;; @param stream-id: ID of the stream to refuel
+;; @param amount: Amount of STX tokens to add
+(define-public (refuel
+    (stream-id uint)
+    (amount uint)
+  )
+  (let (
+    (stream (unwrap! (map-get? streams stream-id) ERR_INVALID_STREAM_ID))
+  )
+    ;; Only sender can refuel their stream
+    (asserts! (is-eq contract-caller (get sender stream)) ERR_UNAUTHORIZED)
+    
+    ;; Transfer tokens from sender to contract
+    (try! (stx-transfer? amount contract-caller (as-contract tx-sender)))
+    
+    ;; Update stream balance
+    (map-set streams stream-id 
+      (merge stream {balance: (+ (get balance stream) amount)})
+    )
+    
+    (ok amount)
+  )
+)
