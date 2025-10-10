@@ -7,3 +7,16 @@
 
 ;; Data variables
 (define-data-var latest-stream-id uint u0)
+
+;; Streams mapping - stores all payment streams
+(define-map streams
+  uint ;; stream-id
+  {
+    sender: principal,
+    recipient: principal,
+    balance: uint,
+    withdrawn-balance: uint,
+    payment-per-block: uint,
+    timeframe: (tuple (start-block uint) (stop-block uint))
+  }
+)
