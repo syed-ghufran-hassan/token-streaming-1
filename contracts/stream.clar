@@ -110,3 +110,29 @@
     delta
   )
 )
+
+;; Check balance for a party involved in a stream
+;; @param stream-id: ID of the stream
+;; @param who: Address to check balance for
+;; @returns: Withdrawable balance for the address
+(define-read-only (balance-of
+    (stream-id uint)
+    (who principal)
+  )
+  (let (
+    (stream (unwrap! (map-get? streams stream-id) u0))
+    (block-delta (calculate-block-delta (get timeframe stream)))
+    (recipient-balance (* block-delta (get payment-per-block stream)))
+  )
+    (if (is-eq who (get recipient stream))
+      ;; Recipient's balance = accumulated - already withdrawn
+      (- recipient-balance (get withdrawn-balance stream))
+      (if (is-eq who (get sender stream))
+        ;; Sender's balance = total balance - recipient's share
+        (- (get balance stream) recipient-balance)
+        ;; Not involved in stream
+        u0
+      )
+    )
+  )
+)
