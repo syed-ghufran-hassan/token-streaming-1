@@ -3,6 +3,7 @@
 
 ;; Error codes
 (define-constant ERR_UNAUTHORIZED (err u0))
+(define-constant ERR_INVALID_SIGNATURE (err u1))
 (define-constant ERR_STREAM_STILL_ACTIVE (err u2))
 (define-constant ERR_INVALID_STREAM_ID (err u3))
 
@@ -187,5 +188,46 @@
     (try! (as-contract (stx-transfer? balance tx-sender (get sender stream))))
     
     (ok balance)
+  )
+)
+
+;; Get hash of stream for signature verification
+;; @param stream-id: ID of the stream
+;; @param new-payment-per-block: New payment per block value
+;; @param new-timeframe: New timeframe tuple
+;; @returns: SHA-256 hash of the stream data
+(define-read-only (hash-stream
+    (stream-id uint)
+    (new-payment-per-block uint)
+    (new-timeframe (tuple (start-block uint) (stop-block uint)))
+  )
+  (let (
+    (stream (unwrap! (map-get? streams stream-id) (sha256 0)))
+    ;; Concatenate all data into a single buffer
+    (msg (concat 
+      (concat 
+        (unwrap-panic (to-consensus-buff? stream)) 
+        (unwrap-panic (to-consensus-buff? new-payment-per-block))
+      ) 
+      (unwrap-panic (to-consensus-buff? new-timeframe))
+    ))
+  )
+    (sha256 msg)
+  )
+)
+
+;; Signature verification
+;; @param hash: The hash that was signed
+;; @param signature: The signature to verify (65 bytes)
+;; @param signer: Expected signer address
+;; @returns: true if signature is valid, false otherwise
+(define-read-only (validate-signature 
+    (hash (buff 32)) 
+    (signature (buff 65)) 
+    (signer principal)
+  )
+  (is-eq 
+    (principal-of? (unwrap! (secp256k1-recover? hash signature) false)) 
+    (ok signer)
   )
 )

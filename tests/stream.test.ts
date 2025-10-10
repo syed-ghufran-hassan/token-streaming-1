@@ -1,4 +1,9 @@
-import { Cl } from "@stacks/transactions";
+import {
+  Cl,
+  createStacksPrivateKey,
+  cvToValue,
+  signMessageHashRsv,
+} from "@stacks/transactions";
 import { beforeEach, describe, expect, it } from "vitest";
 
 const accounts = simnet.getAccounts();
@@ -134,5 +139,39 @@ describe("test token streaming contract", () => {
     expect(refund.events[0].event).toBe("stx_transfer_event");
     expect(refund.events[0].data.amount).toBe("5");
     expect(refund.events[0].data.recipient).toBe(sender);
+  });
+
+  it("signature verification can be done on stream hashes", () => {
+    const hashedStream0 = simnet.callReadOnlyFn(
+      "stream",
+      "hash-stream",
+      [
+        Cl.uint(0),
+        Cl.uint(0),
+        Cl.tuple({ "start-block": Cl.uint(1), "stop-block": Cl.uint(2) }),
+      ],
+      sender
+    );
+
+    const hashAsHex = Buffer.from(hashedStream0.result.buffer).toString("hex");
+    const signature = signMessageHashRsv({
+      messageHash: hashAsHex,
+      privateKey: createStacksPrivateKey(
+        "7287ba251d44a4d3fd9276c88ce34c5c52a038955511cccaf77e61068649c17801"
+      ),
+    });
+
+    const verifySignature = simnet.callReadOnlyFn(
+      "stream",
+      "validate-signature",
+      [
+        Cl.buffer(hashedStream0.result.buffer),
+        Cl.bufferFromHex(signature.data),
+        Cl.principal(sender),
+      ],
+      sender
+    );
+
+    expect(cvToValue(verifySignature.result)).toBe(true);
   });
 });
