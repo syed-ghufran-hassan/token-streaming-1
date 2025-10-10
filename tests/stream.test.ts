@@ -111,4 +111,28 @@ describe("test token streaming contract", () => {
 
     expect(withdraw.result).toBeErr(Cl.uint(0));
   });
+
+  it("ensures sender can withdraw excess tokens", () => {
+    // Block 3
+    simnet.callPublicFn("stream", "refuel", [Cl.uint(0), Cl.uint(5)], sender);
+
+    // Block 4 and 5
+    simnet.mineEmptyBlock();
+    simnet.mineEmptyBlock();
+
+    // Claim tokens
+    simnet.callPublicFn("stream", "withdraw", [Cl.uint(0)], recipient);
+
+    // Withdraw excess
+    const refund = simnet.callPublicFn(
+      "stream",
+      "refund",
+      [Cl.uint(0)],
+      sender
+    );
+
+    expect(refund.events[0].event).toBe("stx_transfer_event");
+    expect(refund.events[0].data.amount).toBe("5");
+    expect(refund.events[0].data.recipient).toBe(sender);
+  });
 });

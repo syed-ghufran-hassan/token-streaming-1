@@ -3,6 +3,7 @@
 
 ;; Error codes
 (define-constant ERR_UNAUTHORIZED (err u0))
+(define-constant ERR_STREAM_STILL_ACTIVE (err u2))
 (define-constant ERR_INVALID_STREAM_ID (err u3))
 
 ;; Data variables
@@ -156,6 +157,34 @@
     
     ;; Transfer tokens from contract to recipient
     (try! (as-contract (stx-transfer? balance tx-sender (get recipient stream))))
+    
+    (ok balance)
+  )
+)
+
+;; Withdraw excess locked tokens (sender only, after stream ends)
+;; @param stream-id: ID of the stream to refund from
+(define-public (refund
+    (stream-id uint)
+  )
+  (let (
+    (stream (unwrap! (map-get? streams stream-id) ERR_INVALID_STREAM_ID))
+    (balance (balance-of stream-id (get sender stream)))
+  )
+    ;; Only sender can refund
+    (asserts! (is-eq contract-caller (get sender stream)) ERR_UNAUTHORIZED)
+    
+    ;; Stream must be over
+    (asserts! (< (get stop-block (get timeframe stream)) block-height) ERR_STREAM_STILL_ACTIVE)
+    
+    ;; Update stream balance
+    (map-set streams stream-id (merge stream {
+        balance: (- (get balance stream) balance),
+      }
+    ))
+    
+    ;; Transfer excess tokens back to sender
+    (try! (as-contract (stx-transfer? balance tx-sender (get sender stream))))
     
     (ok balance)
   )
