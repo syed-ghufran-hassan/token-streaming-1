@@ -174,4 +174,55 @@ describe("test token streaming contract", () => {
 
     expect(cvToValue(verifySignature.result)).toBe(true);
   });
+
+  it("ensures timeframe and payment per block can be modified with consent of both parties", () => {
+    const hashedStream0 = simnet.callReadOnlyFn(
+      "stream",
+      "hash-stream",
+      [
+        Cl.uint(0),
+        Cl.uint(1),
+        Cl.tuple({ "start-block": Cl.uint(0), "stop-block": Cl.uint(4) }),
+      ],
+      sender
+    );
+
+    const hashAsHex = Buffer.from(hashedStream0.result.buffer).toString("hex");
+    const senderSignature = signMessageHashRsv({
+      messageHash: hashAsHex,
+      // This private key is for the `sender` wallet - i.e. `wallet_1`
+      // This can be found in the `settings/Devnet.toml` config file
+      privateKey: createStacksPrivateKey(
+        "7287ba251d44a4d3fd9276c88ce34c5c52a038955511cccaf77e61068649c17801"
+      ),
+    });
+
+    simnet.callPublicFn(
+      "stream",
+      "update-details",
+      [
+        Cl.uint(0),
+        Cl.uint(1),
+        Cl.tuple({ "start-block": Cl.uint(0), "stop-block": Cl.uint(4) }),
+        Cl.principal(sender),
+        Cl.bufferFromHex(senderSignature.data),
+      ],
+      recipient
+    );
+
+    const updatedStream = simnet.getMapEntry("stream", "streams", Cl.uint(0));
+    expect(updatedStream).toBeSome(
+      Cl.tuple({
+        sender: Cl.principal(sender),
+        recipient: Cl.principal(recipient),
+        balance: Cl.uint(5),
+        "withdrawn-balance": Cl.uint(0),
+        "payment-per-block": Cl.uint(1),
+        timeframe: Cl.tuple({
+          "start-block": Cl.uint(0),
+          "stop-block": Cl.uint(4),
+        }),
+      })
+    );
+  });
 });

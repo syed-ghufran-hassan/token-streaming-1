@@ -231,3 +231,50 @@
     (ok signer)
   )
 )
+
+;; Update stream configuration (requires consent from both parties)
+;; @param stream-id: ID of the stream to update
+;; @param payment-per-block: New payment per block value
+;; @param timeframe: New timeframe tuple
+;; @param signer: Address of the consenting party
+;; @param signature: Signature from the consenting party
+(define-public (update-details
+    (stream-id uint)
+    (payment-per-block uint)
+    (timeframe (tuple (start-block uint) (stop-block uint)))
+    (signer principal)
+    (signature (buff 65))
+  )
+  (let (
+    (stream (unwrap! (map-get? streams stream-id) ERR_INVALID_STREAM_ID))  
+  )
+    ;; Verify signature from consenting party
+    (asserts! 
+      (validate-signature 
+        (hash-stream stream-id payment-per-block timeframe) 
+        signature 
+        signer
+      ) 
+      ERR_INVALID_SIGNATURE
+    )
+    
+    ;; Ensure one of these conditions is met:
+    ;; 1. Caller is sender AND signer is recipient
+    ;; 2. Caller is recipient AND signer is sender
+    (asserts!
+      (or
+        (and (is-eq (get sender stream) contract-caller) (is-eq (get recipient stream) signer))
+        (and (is-eq (get sender stream) signer) (is-eq (get recipient stream) contract-caller))
+      )
+      ERR_UNAUTHORIZED
+    )
+    
+    ;; Update stream details
+    (map-set streams stream-id (merge stream {
+        payment-per-block: payment-per-block,
+        timeframe: timeframe
+    }))
+    
+    (ok true)
+  )
+)
