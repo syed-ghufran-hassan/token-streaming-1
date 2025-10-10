@@ -136,3 +136,27 @@
     )
   )
 )
+
+;; Withdraw received tokens (recipient only)
+;; @param stream-id: ID of the stream to withdraw from
+(define-public (withdraw
+    (stream-id uint)
+  )
+  (let (
+    (stream (unwrap! (map-get? streams stream-id) ERR_INVALID_STREAM_ID))
+    (balance (balance-of stream-id contract-caller))
+  )
+    ;; Only recipient can withdraw
+    (asserts! (is-eq contract-caller (get recipient stream)) ERR_UNAUTHORIZED)
+    
+    ;; Update withdrawn balance
+    (map-set streams stream-id 
+      (merge stream {withdrawn-balance: (+ (get withdrawn-balance stream) balance)})
+    )
+    
+    ;; Transfer tokens from contract to recipient
+    (try! (as-contract (stx-transfer? balance tx-sender (get recipient stream))))
+    
+    (ok balance)
+  )
+)

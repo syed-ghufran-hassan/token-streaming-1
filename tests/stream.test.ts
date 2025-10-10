@@ -83,4 +83,32 @@ describe("test token streaming contract", () => {
 
     expect(result.result).toBeErr(Cl.uint(0));
   });
+
+  it("ensures recipient can withdraw tokens over time", () => {
+    // Block 1 was used to deploy contract
+    // Block 2 was used to create stream
+    // `withdraw` will be called in Block 3
+    // so expected to withdraw (Block 3 - Start_Block) = (3 - 0) tokens
+    const withdraw = simnet.callPublicFn(
+      "stream",
+      "withdraw",
+      [Cl.uint(0)],
+      recipient
+    );
+
+    expect(withdraw.events[0].event).toBe("stx_transfer_event");
+    expect(withdraw.events[0].data.amount).toBe("3");
+    expect(withdraw.events[0].data.recipient).toBe(recipient);
+  });
+
+  it("ensures non-recipient cannot withdraw tokens from stream", () => {
+    const withdraw = simnet.callPublicFn(
+      "stream",
+      "withdraw",
+      [Cl.uint(0)],
+      randomUser
+    );
+
+    expect(withdraw.result).toBeErr(Cl.uint(0));
+  });
 });
